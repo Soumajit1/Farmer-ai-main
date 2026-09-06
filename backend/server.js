@@ -3,6 +3,7 @@ const cors = require('cors');
 const db = require('./db');
 
 const authRoutes = require('./routes/auth');
+
 const farmerRoutes = require('./routes/farmer');
 const farmerProduceRoutes = require('./routes/farmer-produce');
 const farmerOfferRoutes = require('./routes/farmer-offers');
@@ -13,6 +14,8 @@ const buyerRoutes = require('./routes/buyer');
 const buyerOfferRoutes = require('./routes/buyer-offers');
 const buyerTransactionRoutes = require('./routes/buyer-transactions');
 const buyerLogisticsRoutes = require('./routes/buyer-logistics');
+
+const fpoRoutes = require('./routes/fpo');
 
 const notificationRoutes = require('./routes/notifications');
 
@@ -29,7 +32,7 @@ app.use(express.json());
 
 
 // =====================================================
-// AUTHENTICATION
+// AUTH
 // =====================================================
 
 app.use(
@@ -39,7 +42,7 @@ app.use(
 
 
 // =====================================================
-// FARMER ROUTES
+// FARMER
 // =====================================================
 
 app.use(
@@ -69,7 +72,7 @@ app.use(
 
 
 // =====================================================
-// BUYER ROUTES
+// BUYER
 // =====================================================
 
 app.use(
@@ -94,6 +97,16 @@ app.use(
 
 
 // =====================================================
+// FPO
+// =====================================================
+
+app.use(
+    '/api/fpo',
+    fpoRoutes
+);
+
+
+// =====================================================
 // NOTIFICATIONS
 // =====================================================
 
@@ -104,93 +117,74 @@ app.use(
 
 
 // =====================================================
-// ROOT ROUTE
+// ROOT
 // =====================================================
 
-app.get(
-    '/',
-    (req, res) => {
+app.get('/', (req, res) => {
 
-        res.json({
-            message:
-                'AgriLink AI Backend is running'
-        });
+    res.json({
+        message:
+            'AgriLink AI Backend is running'
+    });
 
-    }
-);
+});
 
 
 // =====================================================
 // DATABASE TEST
 // =====================================================
 
-app.get(
-    '/api/test-db',
-    (req, res) => {
+app.get('/api/test-db', (req, res) => {
 
-        db.query(
-            'SELECT 1 AS test',
-            (err, results) => {
+    db.query(
+        'SELECT 1 AS test',
+        (err, results) => {
 
-                if (err) {
+            if (err) {
 
-                    console.error(
-                        'Database connection failed:',
-                        err
-                    );
+                console.error(
+                    'Database test error:',
+                    err
+                );
 
-                    return res.status(500).json({
-
-                        error:
-                            'Database connection failed',
-
-                        details:
-                            err.message,
-
-                        code:
-                            err.code
-
-                    });
-
-                }
-
-
-                res.json({
-
-                    message:
-                        'MySQL connected successfully',
-
-                    result:
-                        results
-
+                return res.status(500).json({
+                    error:
+                        'Database connection failed',
+                    details:
+                        err.message
                 });
 
             }
-        );
 
-    }
-);
+            return res.json({
+                success: true,
+                database: 'connected',
+                result: results
+            });
+
+        }
+    );
+
+});
 
 
 // =====================================================
-// 404 HANDLER
+// 404
 // =====================================================
 
-app.use(
-    (req, res) => {
+app.use((req, res) => {
 
-        res.status(404).json({
+    res.status(404).json({
 
-            error:
-                'API route not found',
+        error:
+            'API route not found',
 
-            path:
-                req.originalUrl
+        path:
+            req.originalUrl
 
-        });
+    });
 
-    }
-);
+});
 
 
 // =====================================================
@@ -225,7 +219,6 @@ app.use(
 
 const PORT =
     process.env.PORT || 5000;
-
 
 app.listen(
     PORT,

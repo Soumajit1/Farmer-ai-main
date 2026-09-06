@@ -5,8 +5,8 @@ const router = express.Router();
 
 /*
     GET ALL NOTIFICATIONS FOR A USER
-    Example:
-    GET /api/notifications/2
+
+    GET /api/notifications/:userId
 */
 router.get('/:userId', (req, res) => {
     const userId = Number(req.params.userId);
@@ -45,7 +45,7 @@ router.get('/:userId', (req, res) => {
             SELECT COUNT(*) AS unreadCount
             FROM notifications
             WHERE user_id = ?
-            AND is_read = FALSE
+              AND is_read = FALSE
         `;
 
         db.query(unreadSql, [userId], (countErr, countResult) => {
@@ -59,7 +59,9 @@ router.get('/:userId', (req, res) => {
 
             res.json({
                 notifications,
-                unreadCount: countResult[0].unreadCount
+                unreadCount: Number(
+                    countResult[0]?.unreadCount || 0
+                )
             });
         });
     });
@@ -87,31 +89,66 @@ router.post('/', (req, res) => {
         type = 'info'
     } = req.body;
 
-    if (!userId || !title || !message) {
+    const numericUserId = Number(userId);
+
+    if (
+        !Number.isInteger(numericUserId) ||
+        numericUserId <= 0 ||
+        !String(title || '').trim() ||
+        !String(message || '').trim()
+    ) {
         return res.status(400).json({
-            message: 'userId, title and message are required'
+            message: 'Valid userId, title and message are required'
         });
     }
 
+    const allowedTypes = [
+        'info',
+        'offer',
+        'counter',
+        'transaction',
+        'shipment',
+        'success',
+        'warning',
+        'error'
+    ];
+
+    const notificationType = allowedTypes.includes(type)
+        ? type
+        : 'info';
+
     const sql = `
         INSERT INTO notifications
-        (user_id, title, message, type)
+        (
+            user_id,
+            title,
+            message,
+            type
+        )
         VALUES (?, ?, ?, ?)
     `;
 
     db.query(
         sql,
-        [userId, title, message, type],
+        [
+            numericUserId,
+            String(title).trim(),
+            String(message).trim(),
+            notificationType
+        ],
         (err, result) => {
             if (err) {
-                console.error('Notification creation error:', err);
+                console.error(
+                    'Notification creation error:',
+                    err
+                );
 
                 return res.status(500).json({
                     message: 'Failed to create notification'
                 });
             }
 
-            res.status(201).json({
+            return res.status(201).json({
                 message: 'Notification created successfully',
                 notificationId: result.insertId
             });
@@ -128,7 +165,10 @@ router.post('/', (req, res) => {
 router.put('/:id/read', (req, res) => {
     const notificationId = Number(req.params.id);
 
-    if (!Number.isInteger(notificationId) || notificationId <= 0) {
+    if (
+        !Number.isInteger(notificationId) ||
+        notificationId <= 0
+    ) {
         return res.status(400).json({
             message: 'Invalid notification ID'
         });
@@ -142,7 +182,10 @@ router.put('/:id/read', (req, res) => {
 
     db.query(sql, [notificationId], (err, result) => {
         if (err) {
-            console.error('Mark notification read error:', err);
+            console.error(
+                'Mark notification read error:',
+                err
+            );
 
             return res.status(500).json({
                 message: 'Failed to mark notification as read'
@@ -155,7 +198,7 @@ router.put('/:id/read', (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             message: 'Notification marked as read'
         });
     });
@@ -170,7 +213,10 @@ router.put('/:id/read', (req, res) => {
 router.put('/user/:userId/read-all', (req, res) => {
     const userId = Number(req.params.userId);
 
-    if (!Number.isInteger(userId) || userId <= 0) {
+    if (
+        !Number.isInteger(userId) ||
+        userId <= 0
+    ) {
         return res.status(400).json({
             message: 'Invalid user ID'
         });
@@ -180,19 +226,22 @@ router.put('/user/:userId/read-all', (req, res) => {
         UPDATE notifications
         SET is_read = TRUE
         WHERE user_id = ?
-        AND is_read = FALSE
+          AND is_read = FALSE
     `;
 
     db.query(sql, [userId], (err) => {
         if (err) {
-            console.error('Mark all notifications read error:', err);
+            console.error(
+                'Mark all notifications read error:',
+                err
+            );
 
             return res.status(500).json({
                 message: 'Failed to mark notifications as read'
             });
         }
 
-        res.json({
+        return res.json({
             message: 'All notifications marked as read'
         });
     });
